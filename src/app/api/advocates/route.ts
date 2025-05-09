@@ -6,7 +6,6 @@ import { NextApiRequest } from "next";
 export async function GET(req: NextApiRequest) {
   let searchTerm: string | null = null;
   const url = new URL(req.url!);
-  console.log(url)
 
   if (url.searchParams.has('search')) {
     searchTerm = url.searchParams.get('search');
@@ -17,7 +16,6 @@ export async function GET(req: NextApiRequest) {
 
   let data;
   if (searchTerm) {
-    console.log("using search term", searchTerm)
     data = await db.select().from(advocates).where(or(
       ilike(advocates.firstName, `%${searchTerm}%`),
       ilike(advocates.lastName, `%${searchTerm}%`),
