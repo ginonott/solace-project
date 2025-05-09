@@ -43,7 +43,8 @@ const advocateData = [
     lastName: "Doe",
     city: "New York",
     degree: "MD",
-    specialties: specialties.slice(...randomSpecialty()),
+    // these are deterministic to help facilitate testing
+    specialties: [specialties[3], specialties[8]],
     yearsOfExperience: 10,
     phoneNumber: 5551234567,
   },
