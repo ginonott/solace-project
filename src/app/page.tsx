@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Advocate } from '../db/schema';
+import type { Advocate } from "../db/schema";
 
 export default function Home() {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
@@ -23,8 +23,7 @@ export default function Home() {
 
     const includesInsensitive = (a: string) => {
       return a.toLowerCase().includes(searchTerm.toLowerCase());
-    }
-
+    };
 
     // TODO: we should not be doing this in react - will fix in follow up PR
     const searchTermEl = document.getElementById("search-term");
@@ -40,7 +39,9 @@ export default function Home() {
         includesInsensitive(advocate.lastName) ||
         includesInsensitive(advocate.city) ||
         includesInsensitive(advocate.degree) ||
-        advocate.specialties.map(s => s.toLowerCase()).includes(searchTerm.toLowerCase()) ||
+        advocate.specialties
+          .map((s) => s.toLowerCase())
+          .includes(searchTerm.toLowerCase()) ||
         advocate.yearsOfExperience.toString().includes(searchTerm) ||
         advocate.phoneNumber.toString().includes(searchTerm)
       );
@@ -64,20 +65,28 @@ export default function Home() {
         <p>
           Searching for: <span id="search-term"></span>
         </p>
-        <input name="search" style={{ border: "1px solid black" }} onChange={onChange} type="text" role="searchbox"/>
+        <input
+          name="search"
+          style={{ border: "1px solid black" }}
+          onChange={onChange}
+          type="text"
+          role="searchbox"
+        />
         <button onClick={onClick}>Reset Search</button>
       </div>
       <br />
       <br />
       <table>
         <thead>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>City</th>
-          <th>Degree</th>
-          <th>Specialties</th>
-          <th>Years of Experience</th>
-          <th>Phone Number</th>
+          <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>City</th>
+            <th>Degree</th>
+            <th>Specialties</th>
+            <th>Years of Experience</th>
+            <th>Phone Number</th>
+          </tr>
         </thead>
         <tbody>
           {filteredAdvocates.map((advocate) => {
