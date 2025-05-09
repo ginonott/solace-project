@@ -8,7 +8,7 @@ test('viewing advocates', async ({ page }) => {
   await expect(page.getByText("Jane").first()).toBeVisible();
 
   // verify all relevant information is present
-  const johnDoeRow = await page.locator('tr').first();
+  const johnDoeRow = await page.locator('tr', {has: page.getByText('John')}).first();
 
   await expect(johnDoeRow).toBeVisible();
   await expect(johnDoeRow.getByText("Doe")).toBeVisible();
