@@ -30,3 +30,7 @@ I have opted to only implement E2E tests in the interest of time. Given a real p
 
 Having a 'fake' data source would actually be really useful for fast and determinstic testing. I would revisit introducing a system to
 use the in memory list of advocates from the seed directory for testing.
+
+# DevOps
+
+There should be automated CI/CD to check the tests pass, linting passes, etc. Ideally also a githook that runs prettier and eslint on commit / push.
