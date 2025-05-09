@@ -93,8 +93,10 @@ test('resetting the filter', async ({page}) => {
   const advocatesPage = new AdvocatesPage(page);
   await advocatesPage.goto();
 
+  const promise = page.waitForResponse('/api/advocates');
   await advocatesPage.searchAdvocates('Nonsense Value That Wont Show Up');
-  await expect(await advocatesPage.getAllRows()).not.toBeVisible();
+  await promise;
+  await expect(await advocatesPage.getAdvocateRowByText('John')).not.toBeVisible();
 
   await advocatesPage.resetSearch();
   await expect(await advocatesPage.getAdvocateRowByText('John')).toBeVisible();

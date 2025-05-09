@@ -1,59 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Advocate } from "../db/schema";
 
-export default function Home() {
+const useAdvocates = () => {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
 
-  useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        // TODO: validate the server response with a library like zod or yup or etc
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
-  }, []);
+  const getAdvocates = async (search: string | null = null) => {
+    const abortControlller = new AbortController();
+    let route = "/api/advocates";
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchTerm = e.target.value;
-
-    const includesInsensitive = (a: string) => {
-      return a.toLowerCase().includes(searchTerm.toLowerCase());
-    };
-
-    // TODO: we should not be doing this in react - will fix in follow up PR
-    const searchTermEl = document.getElementById("search-term");
-    if (searchTermEl) {
-      searchTermEl.innerHTML = searchTerm;
+    if (search) {
+      route = `${route}?search=${search}`;
     }
 
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
-      // TODO: this should be filtered at the database level as this wouldn't scale with more than a few advocates
-      return (
-        includesInsensitive(advocate.firstName) ||
-        includesInsensitive(advocate.lastName) ||
-        includesInsensitive(advocate.city) ||
-        includesInsensitive(advocate.degree) ||
-        advocate.specialties
-          .map((s) => s.toLowerCase())
-          .includes(searchTerm.toLowerCase()) ||
-        advocate.yearsOfExperience.toString().includes(searchTerm) ||
-        advocate.phoneNumber.toString().includes(searchTerm)
-      );
-    });
+    try {
+      const response = await fetch(route, {signal: abortControlller.signal});
+      // TODO: handle an error body instead
+      const advocates = await response.json() as {data: Advocate[]};
+      setAdvocates(advocates.data);
+    } catch (error) {
+      // TODO: we need to handle this better - such as taking the user to an error page
+      // and capturing this via sentry or newrelic
+      console.error("failed to fetch advocates", {error});
+      throw error;
+    }
+  }
 
-    setFilteredAdvocates(filteredAdvocates);
-  };
+  // on mount effect
+  useEffect(() => {
+    getAdvocates();
+  }, []);
 
-  const onClick = () => {
-    console.log(advocates);
-    setFilteredAdvocates(advocates);
-  };
+  const onSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = e.target.value.trim();
+
+    getAdvocates(searchValue);
+  }
+
+  const resetSearch = () => {
+    getAdvocates();
+  }
+
+  return {advocates, onSearch, resetSearch};
+}
+
+export default function Home() {
+  const {advocates, onSearch, resetSearch} = useAdvocates();
 
   return (
     <main style={{ margin: "24px" }}>
@@ -62,17 +55,14 @@ export default function Home() {
       <br />
       <div>
         <label htmlFor="search">Search</label>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
         <input
           name="search"
           style={{ border: "1px solid black" }}
-          onChange={onChange}
+          onChange={onSearch}
           type="text"
           role="searchbox"
         />
-        <button onClick={onClick}>Reset Search</button>
+        <button onClick={resetSearch}>Reset Search</button>
       </div>
       <br />
       <br />
@@ -89,7 +79,7 @@ export default function Home() {
           </tr>
         </thead>
         <tbody>
-          {filteredAdvocates.map((advocate) => {
+          {advocates.map((advocate) => {
             return (
               <tr key={advocate.id}>
                 <td>{advocate.firstName}</td>
