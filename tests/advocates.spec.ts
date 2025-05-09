@@ -19,6 +19,14 @@ class AdvocatesPage {
   async searchAdvocates(text: string) {
     return this.page.getByRole("searchbox").fill(text);
   }
+
+  async resetSearch() {
+    return this.page.getByText('Reset Search').click();
+  }
+
+  async getAllRows() {
+    return this.page.locator('tr');
+  }
 }
 
 test('viewing advocates', async ({ page }) => {
@@ -79,4 +87,15 @@ test('filtering advocates is case insensitive', async ({ page }) => {
 
   await expect(johnDoeRow).not.toBeVisible();
   await expect(janeDoeRow).toBeVisible();
+});
+
+test('resetting the filter', async ({page}) => {
+  const advocatesPage = new AdvocatesPage(page);
+  await advocatesPage.goto();
+
+  await advocatesPage.searchAdvocates('Nonsense Value That Wont Show Up');
+  await expect(await advocatesPage.getAllRows()).not.toBeVisible();
+
+  await advocatesPage.resetSearch();
+  await expect(await advocatesPage.getAdvocateRowByText('John')).toBeVisible();
 });
