@@ -1,14 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {debounce} from 'lodash';
 import type { Advocate } from "../db/schema";
+
+const ABORT_REASON = "refetching";
 
 const useAdvocates = () => {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const abortController = useRef<AbortController | null>(null)
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   const getAdvocates = async (search: string | null = null) => {
-    const abortControlller = new AbortController();
+    if (abortController.current) {
+      abortController.current.abort(ABORT_REASON);
+    }
+
+    abortController.current = new AbortController();
+
     let route = "/api/advocates";
 
     if (search) {
@@ -16,28 +25,41 @@ const useAdvocates = () => {
     }
 
     try {
-      const response = await fetch(route, {signal: abortControlller.signal});
+      const response = await fetch(route, {signal: abortController.current.signal});
       // TODO: handle an error body instead
       const advocates = await response.json() as {data: Advocate[]};
       setAdvocates(advocates.data);
     } catch (error) {
+      if (error === ABORT_REASON) {
+        return
+      }
+
       // TODO: we need to handle this better - such as taking the user to an error page
       // and capturing this via sentry or newrelic
       console.error("failed to fetch advocates", {error});
       throw error;
+    } finally {
+      abortController.current = null;
     }
   }
 
   // on mount effect
   useEffect(() => {
     getAdvocates();
+
+    return () => {
+      // This prevents setting data on an unmounted component
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    }
   }, []);
 
-  const onSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSearch = debounce((e: React.ChangeEvent<HTMLInputElement>) => {
     const searchValue = e.target.value.trim();
 
     getAdvocates(searchValue);
-  }
+  }, 200)
 
   const resetSearch = () => {
     if (searchRef.current) {
