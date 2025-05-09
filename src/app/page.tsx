@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEventHandler, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Advocate } from '../db/schema';
 
 export default function Home() {
@@ -21,6 +21,11 @@ export default function Home() {
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value;
 
+    const includesInsensitive = (a: string) => {
+      return a.toLowerCase().includes(searchTerm.toLowerCase());
+    }
+
+
     // TODO: we should not be doing this in react - will fix in follow up PR
     const searchTermEl = document.getElementById("search-term");
     if (searchTermEl) {
@@ -29,13 +34,15 @@ export default function Home() {
 
     console.log("filtering advocates...");
     const filteredAdvocates = advocates.filter((advocate) => {
+      // TODO: this should be filtered at the database level as this wouldn't scale with more than a few advocates
       return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
-        advocate.yearsOfExperience.toString(10).includes(searchTerm)
+        includesInsensitive(advocate.firstName) ||
+        includesInsensitive(advocate.lastName) ||
+        includesInsensitive(advocate.city) ||
+        includesInsensitive(advocate.degree) ||
+        advocate.specialties.map(s => s.toLowerCase()).includes(searchTerm.toLowerCase()) ||
+        advocate.yearsOfExperience.toString().includes(searchTerm) ||
+        advocate.phoneNumber.toString().includes(searchTerm)
       );
     });
 
@@ -53,11 +60,11 @@ export default function Home() {
       <br />
       <br />
       <div>
-        <p>Search</p>
+        <label htmlFor="search">Search</label>
         <p>
           Searching for: <span id="search-term"></span>
         </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
+        <input name="search" style={{ border: "1px solid black" }} onChange={onChange} type="text" role="searchbox"/>
         <button onClick={onClick}>Reset Search</button>
       </div>
       <br />

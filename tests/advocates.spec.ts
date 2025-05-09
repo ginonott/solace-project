@@ -1,20 +1,82 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+class AdvocatesPage {
+  page: Page;
+
+  constructor(page: Page) {
+    this.page = page;
+  }
+
+  async goto() {
+    await this.page.goto("/");
+    await expect(this.page.getByText("Solace Advocates")).toBeVisible();
+  }
+
+  async getAdvocateRowByText(text: string) {
+    return this.page.locator('tr', {has: this.page.getByText(text)}).first();
+  }
+
+  async searchAdvocates(text: string) {
+    return this.page.getByRole("searchbox").fill(text);
+  }
+}
 
 test('viewing advocates', async ({ page }) => {
-  await page.goto("/");
-
-  await expect(page.getByText("Solace Advocates")).toBeVisible();
-  await expect(page.getByText("John").first()).toBeVisible();
-  await expect(page.getByText("Jane").first()).toBeVisible();
+  const advocatesPage = new AdvocatesPage(page);
+  await advocatesPage.goto();
 
   // verify all relevant information is present
-  const johnDoeRow = await page.locator('tr', {has: page.getByText('John')}).first();
+  const johnDoeRow = await advocatesPage.getAdvocateRowByText('John');
+  const janeDoeRow = await advocatesPage.getAdvocateRowByText('Jane');
 
   await expect(johnDoeRow).toBeVisible();
+  await expect(janeDoeRow).toBeVisible();
+
   await expect(johnDoeRow.getByText("Doe")).toBeVisible();
   await expect(johnDoeRow.getByText("New York")).toBeVisible();
   await expect(johnDoeRow.getByText("Suicide History/Attempts")).toBeVisible();
   await expect(johnDoeRow.getByText("Personality disorders")).toBeVisible();
   await expect(johnDoeRow.getByText("10")).toBeVisible();
   await expect(johnDoeRow.getByText("5551234567")).toBeVisible();
+});
+
+test('filtering advocates', async ({ page }) => {
+  const advocatesPage = new AdvocatesPage(page);
+  await advocatesPage.goto();
+
+  // verify all relevant information is present
+  let johnDoeRow = await advocatesPage.getAdvocateRowByText('John');
+  let janeDoeRow = await advocatesPage.getAdvocateRowByText('Jane');
+
+  await expect(johnDoeRow).toBeVisible();
+  await expect(janeDoeRow).toBeVisible();
+
+  await advocatesPage.searchAdvocates('Jane');
+
+  johnDoeRow = await advocatesPage.getAdvocateRowByText('John');
+  janeDoeRow = await advocatesPage.getAdvocateRowByText('Jane');
+
+  await expect(johnDoeRow).not.toBeVisible();
+  await expect(janeDoeRow).toBeVisible();
+
+});
+
+test('filtering advocates is case insensitive', async ({ page }) => {
+  const advocatesPage = new AdvocatesPage(page);
+  await advocatesPage.goto();
+
+  // verify all relevant information is present
+  let johnDoeRow = await advocatesPage.getAdvocateRowByText('John');
+  let janeDoeRow = await advocatesPage.getAdvocateRowByText('Jane');
+
+  await expect(johnDoeRow).toBeVisible();
+  await expect(janeDoeRow).toBeVisible();
+
+  await advocatesPage.searchAdvocates('jane');
+
+  johnDoeRow = await advocatesPage.getAdvocateRowByText('John');
+  janeDoeRow = await advocatesPage.getAdvocateRowByText('Jane');
+
+  await expect(johnDoeRow).not.toBeVisible();
+  await expect(janeDoeRow).toBeVisible();
 });
