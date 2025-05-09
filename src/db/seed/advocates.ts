@@ -1,5 +1,4 @@
-import db from "..";
-import { advocates } from "../schema";
+import type { Advocate } from "../schema";
 
 const specialties = [
   "Bipolar",
@@ -37,7 +36,9 @@ const randomSpecialty = () => {
   return [random1, random2];
 };
 
-const advocateData = [
+// id and createdAt are auto created by the DB. If we introduce a system where
+// we use this as mock data for tests, we'd probably want to include an id and createdAt field
+const advocateData: Array<Omit<Advocate, 'id' | 'createdAt'>> = [
   {
     firstName: "John",
     lastName: "Doe",
