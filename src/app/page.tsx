@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {debounce} from 'lodash';
+import { debounce } from "lodash";
 import type { Advocate } from "../db/schema";
+import Header from "./_components/Header";
+import Search from "./_components/Search";
+import { Table, TBody, TD, TH, THead, TR } from "./_components/Table";
 
 const ABORT_REASON = "refetching";
 
 const useAdvocates = () => {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
-  const abortController = useRef<AbortController | null>(null)
+  const abortController = useRef<AbortController | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
 
   const getAdvocates = async (search: string | null = null) => {
@@ -25,23 +28,25 @@ const useAdvocates = () => {
     }
 
     try {
-      const response = await fetch(route, {signal: abortController.current.signal});
+      const response = await fetch(route, {
+        signal: abortController.current.signal,
+      });
       // TODO: handle an error body instead
-      const advocates = await response.json() as {data: Advocate[]};
+      const advocates = (await response.json()) as { data: Advocate[] };
       setAdvocates(advocates.data);
     } catch (error) {
       if (error === ABORT_REASON) {
-        return
+        return;
       }
 
       // TODO: we need to handle this better - such as taking the user to an error page
       // and capturing this via sentry or newrelic
-      console.error("failed to fetch advocates", {error});
+      console.error("failed to fetch advocates", { error });
       throw error;
     } finally {
       abortController.current = null;
     }
-  }
+  };
 
   // on mount effect
   useEffect(() => {
@@ -50,16 +55,16 @@ const useAdvocates = () => {
     return () => {
       // This prevents setting data on an unmounted component
       if (abortController.current) {
-        abortController.current.abort();
+        abortController.current.abort(ABORT_REASON);
       }
-    }
+    };
   }, []);
 
   const onSearch = debounce((e: React.ChangeEvent<HTMLInputElement>) => {
     const searchValue = e.target.value.trim();
 
     getAdvocates(searchValue);
-  }, 200)
+  }, 200);
 
   const resetSearch = () => {
     if (searchRef.current) {
@@ -67,65 +72,59 @@ const useAdvocates = () => {
     }
 
     getAdvocates();
-  }
+  };
 
-  return {advocates, onSearch, resetSearch, searchRef };
-}
+  return { advocates, onSearch, resetSearch, searchRef };
+};
 
 export default function Home() {
-  const {advocates, onSearch, resetSearch, searchRef} = useAdvocates();
+  const { advocates, onSearch, resetSearch, searchRef } = useAdvocates();
 
   return (
-    <main style={{ margin: "24px" }}>
-      <h1>Solace Advocates</h1>
-      <br />
-      <br />
-      <div>
-        <label htmlFor="search">Search</label>
-        <input
-          name="search"
-          style={{ border: "1px solid black" }}
-          onChange={onSearch}
-          type="text"
-          role="searchbox"
-          ref={searchRef}
+    <main>
+      <Header text="solace advocates" />
+
+      <div className="m-8">
+        <Search
+          inputRef={searchRef}
+          onReset={resetSearch}
+          onSearch={onSearch}
         />
-        <button onClick={resetSearch}>Reset Search</button>
+        <Table>
+          <THead>
+            <TR>
+              <TH>First Name</TH>
+              <TH>Last Name</TH>
+              <TH>City</TH>
+              <TH>Degree</TH>
+              <TH>Specialties</TH>
+              <TH>Years of Experience</TH>
+              <TH>Phone Number</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {advocates.map((advocate) => {
+              return (
+                <TR key={advocate.id}>
+                  <TD>{advocate.firstName}</TD>
+                  <TD>{advocate.lastName}</TD>
+                  <TD>{advocate.city}</TD>
+                  <TD>{advocate.degree}</TD>
+                  <TD>
+                    {advocate.specialties.map((s) => (
+                      // TODO: showing all of these are pretty unwieldly, we should collapse more than
+                      // 2 or 3 into a tooltip or only show those relevant to the user
+                      <div key={s}>{s}</div>
+                    ))}
+                  </TD>
+                  <TD>{advocate.yearsOfExperience}</TD>
+                  <TD>{advocate.phoneNumber}</TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
       </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>City</th>
-            <th>Degree</th>
-            <th>Specialties</th>
-            <th>Years of Experience</th>
-            <th>Phone Number</th>
-          </tr>
-        </thead>
-        <tbody>
-          {advocates.map((advocate) => {
-            return (
-              <tr key={advocate.id}>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((s) => (
-                    <div key={s}>{s}</div>
-                  ))}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
     </main>
   );
 }
