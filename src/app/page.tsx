@@ -1,59 +1,79 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {debounce} from 'lodash';
 import type { Advocate } from "../db/schema";
 
-export default function Home() {
+const ABORT_REASON = "refetching";
+
+const useAdvocates = () => {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
+  const abortController = useRef<AbortController | null>(null)
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        // TODO: validate the server response with a library like zod or yup or etc
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
-  }, []);
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchTerm = e.target.value;
-
-    const includesInsensitive = (a: string) => {
-      return a.toLowerCase().includes(searchTerm.toLowerCase());
-    };
-
-    // TODO: we should not be doing this in react - will fix in follow up PR
-    const searchTermEl = document.getElementById("search-term");
-    if (searchTermEl) {
-      searchTermEl.innerHTML = searchTerm;
+  const getAdvocates = async (search: string | null = null) => {
+    if (abortController.current) {
+      abortController.current.abort(ABORT_REASON);
     }
 
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
-      // TODO: this should be filtered at the database level as this wouldn't scale with more than a few advocates
-      return (
-        includesInsensitive(advocate.firstName) ||
-        includesInsensitive(advocate.lastName) ||
-        includesInsensitive(advocate.city) ||
-        includesInsensitive(advocate.degree) ||
-        advocate.specialties
-          .map((s) => s.toLowerCase())
-          .includes(searchTerm.toLowerCase()) ||
-        advocate.yearsOfExperience.toString().includes(searchTerm) ||
-        advocate.phoneNumber.toString().includes(searchTerm)
-      );
-    });
+    abortController.current = new AbortController();
 
-    setFilteredAdvocates(filteredAdvocates);
-  };
+    let route = "/api/advocates";
 
-  const onClick = () => {
-    console.log(advocates);
-    setFilteredAdvocates(advocates);
-  };
+    if (search) {
+      route = `${route}?search=${search}`;
+    }
+
+    try {
+      const response = await fetch(route, {signal: abortController.current.signal});
+      // TODO: handle an error body instead
+      const advocates = await response.json() as {data: Advocate[]};
+      setAdvocates(advocates.data);
+    } catch (error) {
+      if (error === ABORT_REASON) {
+        return
+      }
+
+      // TODO: we need to handle this better - such as taking the user to an error page
+      // and capturing this via sentry or newrelic
+      console.error("failed to fetch advocates", {error});
+      throw error;
+    } finally {
+      abortController.current = null;
+    }
+  }
+
+  // on mount effect
+  useEffect(() => {
+    getAdvocates();
+
+    return () => {
+      // This prevents setting data on an unmounted component
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    }
+  }, []);
+
+  const onSearch = debounce((e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = e.target.value.trim();
+
+    getAdvocates(searchValue);
+  }, 200)
+
+  const resetSearch = () => {
+    if (searchRef.current) {
+      searchRef.current.value = "";
+    }
+
+    getAdvocates();
+  }
+
+  return {advocates, onSearch, resetSearch, searchRef };
+}
+
+export default function Home() {
+  const {advocates, onSearch, resetSearch, searchRef} = useAdvocates();
 
   return (
     <main style={{ margin: "24px" }}>
@@ -62,17 +82,15 @@ export default function Home() {
       <br />
       <div>
         <label htmlFor="search">Search</label>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
         <input
           name="search"
           style={{ border: "1px solid black" }}
-          onChange={onChange}
+          onChange={onSearch}
           type="text"
           role="searchbox"
+          ref={searchRef}
         />
-        <button onClick={onClick}>Reset Search</button>
+        <button onClick={resetSearch}>Reset Search</button>
       </div>
       <br />
       <br />
@@ -89,7 +107,7 @@ export default function Home() {
           </tr>
         </thead>
         <tbody>
-          {filteredAdvocates.map((advocate) => {
+          {advocates.map((advocate) => {
             return (
               <tr key={advocate.id}>
                 <td>{advocate.firstName}</td>
