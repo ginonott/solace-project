@@ -16,6 +16,10 @@ class AdvocatesPage {
     return this.page.locator('tr', {has: this.page.getByText(text)}).first();
   }
 
+  async getSearchValue() {
+    return this.page.getByRole("searchbox").inputValue();
+  }
+
   async searchAdvocates(text: string) {
     return this.page.getByRole("searchbox").fill(text);
   }
@@ -100,4 +104,5 @@ test('resetting the filter', async ({page}) => {
 
   await advocatesPage.resetSearch();
   await expect(await advocatesPage.getAdvocateRowByText('John')).toBeVisible();
+  await expect(await advocatesPage.getSearchValue()).toBe("");
 });

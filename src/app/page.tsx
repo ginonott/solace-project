@@ -5,6 +5,7 @@ import type { Advocate } from "../db/schema";
 
 const useAdvocates = () => {
   const [advocates, setAdvocates] = useState<Advocate[]>([]);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const getAdvocates = async (search: string | null = null) => {
     const abortControlller = new AbortController();
@@ -39,14 +40,18 @@ const useAdvocates = () => {
   }
 
   const resetSearch = () => {
+    if (searchRef.current) {
+      searchRef.current.value = "";
+    }
+
     getAdvocates();
   }
 
-  return {advocates, onSearch, resetSearch};
+  return {advocates, onSearch, resetSearch, searchRef };
 }
 
 export default function Home() {
-  const {advocates, onSearch, resetSearch} = useAdvocates();
+  const {advocates, onSearch, resetSearch, searchRef} = useAdvocates();
 
   return (
     <main style={{ margin: "24px" }}>
@@ -61,6 +66,7 @@ export default function Home() {
           onChange={onSearch}
           type="text"
           role="searchbox"
+          ref={searchRef}
         />
         <button onClick={resetSearch}>Reset Search</button>
       </div>
